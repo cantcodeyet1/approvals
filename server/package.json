@@ -1,0 +1,24 @@
+{
+  "name": "approvals-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.112.4",
+    "archiver": "^8.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "multer": "^2.0.0",
+    "pdf-lib": "^1.17.1",
+    "sharp": "^0.35.4"
+  }
+}
