@@ -54,24 +54,32 @@ export default function Dashboard() {
     }
   }
 
-  const [discardTarget, setDiscardTarget] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
 
   function requestDiscard(e, invoice) {
     e.stopPropagation();
-    setDiscardTarget(invoice);
+    setConfirmDelete({
+      ids: [invoice.id],
+      label: `"${(invoice.original_filename || 'Untitled document').replace(/\.pdf$/i, '')}"`,
+    });
+  }
+
+  function requestBulkDelete(ids) {
+    if (ids.length === 0) return;
+    setConfirmDelete({ ids, label: `${ids.length} document${ids.length === 1 ? '' : 's'}` });
   }
 
   async function confirmDiscard() {
-    const id = discardTarget.id;
-    setDiscardTarget(null);
-    setInvoices((prev) => prev.filter((inv) => inv.id !== id));
+    const ids = confirmDelete.ids;
+    setConfirmDelete(null);
+    setInvoices((prev) => prev.filter((inv) => !ids.includes(inv.id)));
     setSelected((prev) => {
       const next = new Set(prev);
-      next.delete(id);
+      ids.forEach((id) => next.delete(id));
       return next;
     });
     try {
-      await api.deleteInvoice(id);
+      await Promise.all(ids.map((id) => api.deleteInvoice(id)));
     } catch (err) {
       setError(err.message);
       refresh();
@@ -186,12 +194,18 @@ export default function Dashboard() {
             <div className="selection-pill">
               <span>{selectedPending.length} selected</span>
               <button onClick={() => navigate(`/sign?ids=${selectedPending.join(',')}`)}>Sign →</button>
+              <button className="danger-link" onClick={() => requestBulkDelete(selectedPending)}>
+                Delete →
+              </button>
             </div>
           )}
           {selectedApproved.length > 0 && (
             <div className="selection-pill">
               <span>{selectedApproved.length} selected</span>
               <a href={downloadHref(selectedApproved)}>Download →</a>
+              <button className="danger-link" onClick={() => requestBulkDelete(selectedApproved)}>
+                Delete →
+              </button>
             </div>
           )}
         </div>
@@ -248,6 +262,9 @@ export default function Dashboard() {
                     </>
                   ) : (
                     <>
+                      <button className="btn-icon danger" onClick={(e) => requestDiscard(e, inv)} title="Discard" aria-label="Discard">
+                        <TrashIcon />
+                      </button>
                       <a
                         className="btn-icon"
                         href={downloadUrl(inv.id, 'stamped')}
@@ -268,13 +285,13 @@ export default function Dashboard() {
       )}
 
       <ConfirmDialog
-        open={!!discardTarget}
-        title="Discard this document?"
-        message={`"${discardTarget ? (discardTarget.original_filename || 'Untitled document').replace(/\.pdf$/i, '') : ''}" will be permanently removed. This can't be undone.`}
+        open={!!confirmDelete}
+        title={confirmDelete && confirmDelete.ids.length > 1 ? 'Discard these documents?' : 'Discard this document?'}
+        message={`${confirmDelete ? confirmDelete.label : ''} will be permanently removed. This can't be undone.`}
         confirmLabel="Discard"
         danger
         onConfirm={confirmDiscard}
-        onCancel={() => setDiscardTarget(null)}
+        onCancel={() => setConfirmDelete(null)}
       />
     </div>
   );

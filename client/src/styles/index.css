@@ -1020,6 +1020,10 @@ select:focus {
   gap: 4px;
 }
 
+.selection-pill button.danger-link {
+  color: var(--danger);
+}
+
 .signature-preview-well {
   background: repeating-conic-gradient(var(--surface-2) 0% 25%, var(--surface) 0% 50%) 50% / 16px 16px;
   border: 1px solid var(--border);
