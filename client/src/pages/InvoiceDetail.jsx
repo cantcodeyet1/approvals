@@ -130,7 +130,10 @@ export default function InvoiceDetail() {
     }
   }
 
-  if (error) return <div className="error-banner">{error}</div>;
+  // Only a failure to load the invoice itself should replace the whole page —
+  // an error from something happening *within* the page (like a price check)
+  // must not wipe out the rest of the editing UI.
+  if (error && !invoice) return <div className="error-banner">{error}</div>;
   if (!invoice) return <PageLoading />;
 
   const activeSigner = signers.find((s) => s.id === signerId);
@@ -140,6 +143,8 @@ export default function InvoiceDetail() {
       <button className="btn-icon" onClick={() => navigate('/')} aria-label="Back to invoices" title="Back to invoices" style={{ marginBottom: 16 }}>
         <BackArrowIcon size={18} />
       </button>
+
+      {error && <div className="error-banner">{error}</div>}
 
       <div className="page-header">
         <div>
