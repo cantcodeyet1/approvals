@@ -38,6 +38,7 @@ export default function InvoiceDetail() {
   const [includeText, setIncludeText] = useState(true);
   const [stampPosition, setStampPosition] = useState(null);
   const [sigWidth, setSigWidth] = useState(null);
+  const [stampAllPages, setStampAllPages] = useState(false);
   const [loadingEdit, setLoadingEdit] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -77,6 +78,7 @@ export default function InvoiceDetail() {
       setIncludeText(true);
       setStampPosition(null);
       setSigWidth(null);
+      setStampAllPages(false);
       setEditing(true);
     } catch (err) {
       setError(err.message);
@@ -117,6 +119,7 @@ export default function InvoiceDetail() {
         stampX: stampPosition?.xPt,
         stampY: stampPosition?.yPt,
         stampPage: stampPosition?.page,
+        stampAllPages,
         includeText,
         signerId,
         sigWidth: sigWidth || undefined,
@@ -202,6 +205,16 @@ export default function InvoiceDetail() {
               <div className="field" style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <input type="checkbox" checked={includeText} onChange={(e) => setIncludeText(e.target.checked)} style={{ width: 'auto' }} />
                 <label style={{ margin: 0 }}>Include "Approved By / Date / Project" text</label>
+              </div>
+
+              <div className="field" style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <input
+                  type="checkbox"
+                  checked={stampAllPages}
+                  onChange={(e) => setStampAllPages(e.target.checked)}
+                  style={{ width: 'auto' }}
+                />
+                <label style={{ margin: 0 }}>Stamp every page (same spot on each page)</label>
               </div>
             </div>
 

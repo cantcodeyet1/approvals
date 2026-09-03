@@ -145,7 +145,8 @@ router.post('/pending', upload.single('file'), async (req, res) => {
 
 // Approve a previously-loaded pending document: stamps its existing original file in place.
 router.post('/:id/approve', async (req, res) => {
-  const { project, approvedDate, itemDescription, stampX, stampY, stampPage, includeText, signerId, sigWidth, filename } = req.body;
+  const { project, approvedDate, itemDescription, stampX, stampY, stampPage, stampAllPages, includeText, signerId, sigWidth, filename } =
+    req.body;
   if (!project || !approvedDate) {
     return res.status(400).json({ error: 'project and approvedDate are required' });
   }
@@ -182,6 +183,7 @@ router.post('/:id/approve', async (req, res) => {
       y: stampY !== undefined ? Number(stampY) : undefined,
       pageIndex: stampPage !== undefined ? Number(stampPage) : 0,
       includeText: includeText !== false && includeText !== 'false',
+      allPages: stampAllPages === true || stampAllPages === 'true',
     });
   } catch (err) {
     return res.status(422).json({ error: `Could not stamp file. Is it a valid PDF? (${err.message})` });
@@ -232,7 +234,8 @@ router.delete('/:id', async (req, res) => {
 
 // Upload a fresh invoice and approve it immediately in one step.
 router.post('/', upload.single('file'), async (req, res) => {
-  const { project, approvedDate, itemDescription, stampX, stampY, stampPage, includeText, signerId, sigWidth, filename } = req.body;
+  const { project, approvedDate, itemDescription, stampX, stampY, stampPage, stampAllPages, includeText, signerId, sigWidth, filename } =
+    req.body;
   const file = req.file;
 
   if (!file) return res.status(400).json({ error: 'Missing invoice file' });
@@ -278,6 +281,7 @@ router.post('/', upload.single('file'), async (req, res) => {
       y: stampY !== undefined ? Number(stampY) : undefined,
       pageIndex: stampPage !== undefined ? Number(stampPage) : 0,
       includeText: includeText !== 'false',
+      allPages: stampAllPages === true || stampAllPages === 'true',
     });
   } catch (err) {
     return res.status(422).json({ error: `Could not stamp file. Is it a valid PDF? (${err.message})` });

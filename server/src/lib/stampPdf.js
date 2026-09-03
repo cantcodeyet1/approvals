@@ -9,39 +9,61 @@ import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 // positioner in the client) decided to place it. Falls back to the old
 // fixed top-left corner if not given. When includeText is false, only the
 // signature image is stamped (no "Approved By / Date / Project" lines).
-export async function stampInvoicePdf({ pdfBytes, approvedBy, date, project, signaturePngBytes, sigWidth, x, y, pageIndex = 0, includeText = true }) {
+// When allPages is true, the same stamp is drawn at the same (x, y) on every
+// page instead of just pageIndex — each page is clamped to its own size, so
+// this is safe even if pages in the document vary in dimensions.
+export async function stampInvoicePdf({
+  pdfBytes,
+  approvedBy,
+  date,
+  project,
+  signaturePngBytes,
+  sigWidth,
+  x,
+  y,
+  pageIndex = 0,
+  includeText = true,
+  allPages = false,
+}) {
   const pdfDoc = await PDFDocument.load(pdfBytes);
   const pages = pdfDoc.getPages();
-  const page = pages[Math.min(Math.max(pageIndex, 0), pages.length - 1)];
-  const { width, height } = page.getSize();
 
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const magenta = rgb(0.72, 0.11, 0.55);
+  const signatureImage = signaturePngBytes ? await pdfDoc.embedPng(signaturePngBytes) : null;
 
   const lineHeight = 14;
   const fontSize = 11;
+  const sigW = sigWidth || 90;
+  const sigHeight = signatureImage ? (signatureImage.height / signatureImage.width) * sigW : 0;
 
-  const stampX = Math.min(Math.max(x ?? 40, 0), Math.max(width - 10, 0));
-  let cursorY = Math.min(Math.max(y ?? height - 40, 0), height);
+  function stampOnePage(page) {
+    const { width, height } = page.getSize();
+    const stampX = Math.min(Math.max(x ?? 40, 0), Math.max(width - 10, 0));
+    let cursorY = Math.min(Math.max(y ?? height - 40, 0), height);
 
-  if (includeText) {
-    const lines = [`Approved By: ${approvedBy}`, `Date: ${date}`, `Project: ${project}`];
-    for (const line of lines) {
-      page.drawText(line, { x: stampX, y: cursorY, size: fontSize, font, color: magenta });
-      cursorY -= lineHeight;
+    if (includeText) {
+      const lines = [`Approved By: ${approvedBy}`, `Date: ${date}`, `Project: ${project}`];
+      for (const line of lines) {
+        page.drawText(line, { x: stampX, y: cursorY, size: fontSize, font, color: magenta });
+        cursorY -= lineHeight;
+      }
+    }
+
+    if (signatureImage) {
+      page.drawImage(signatureImage, {
+        x: stampX,
+        y: cursorY - sigHeight,
+        width: sigW,
+        height: sigHeight,
+      });
     }
   }
 
-  if (signaturePngBytes) {
-    const signatureImage = await pdfDoc.embedPng(signaturePngBytes);
-    const sigW = sigWidth || 90;
-    const sigHeight = (signatureImage.height / signatureImage.width) * sigW;
-    page.drawImage(signatureImage, {
-      x: stampX,
-      y: cursorY - sigHeight,
-      width: sigW,
-      height: sigHeight,
-    });
+  if (allPages) {
+    pages.forEach(stampOnePage);
+  } else {
+    stampOnePage(pages[Math.min(Math.max(pageIndex, 0), pages.length - 1)]);
   }
 
   return pdfDoc.save();

@@ -82,11 +82,26 @@ export const api = {
       stamped_file_url: fileUrl(invoice.stamped_file_url),
     };
   },
-  approveInvoice: async (id, { project, approvedDate, itemDescription, stampX, stampY, stampPage, includeText, signerId, sigWidth, filename }) => {
+  approveInvoice: async (
+    id,
+    { project, approvedDate, itemDescription, stampX, stampY, stampPage, stampAllPages, includeText, signerId, sigWidth, filename }
+  ) => {
     const invoice = await request(`/api/invoices/${id}/approve`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ project, approvedDate, itemDescription, stampX, stampY, stampPage, includeText, signerId, sigWidth, filename }),
+      body: JSON.stringify({
+        project,
+        approvedDate,
+        itemDescription,
+        stampX,
+        stampY,
+        stampPage,
+        stampAllPages,
+        includeText,
+        signerId,
+        sigWidth,
+        filename,
+      }),
     });
     return {
       ...invoice,
@@ -101,7 +116,20 @@ export const api = {
     const blob = await res.blob();
     return new File([blob], filename, { type: 'application/pdf' });
   },
-  createInvoice: async ({ file, project, approvedDate, itemDescription, stampX, stampY, stampPage, includeText, signerId, sigWidth, filename }) => {
+  createInvoice: async ({
+    file,
+    project,
+    approvedDate,
+    itemDescription,
+    stampX,
+    stampY,
+    stampPage,
+    stampAllPages,
+    includeText,
+    signerId,
+    sigWidth,
+    filename,
+  }) => {
     const form = new FormData();
     form.append('file', file);
     form.append('project', project);
@@ -112,6 +140,7 @@ export const api = {
       form.append('stampY', stampY);
     }
     if (stampPage !== undefined) form.append('stampPage', stampPage);
+    if (stampAllPages) form.append('stampAllPages', 'true');
     if (signerId) form.append('signerId', signerId);
     if (sigWidth) form.append('sigWidth', sigWidth);
     if (filename) form.append('filename', filename);

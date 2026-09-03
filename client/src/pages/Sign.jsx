@@ -68,6 +68,7 @@ export default function Sign() {
             includeText: true,
             stampPosition: null,
             sigWidth: null,
+            stampAllPages: false,
             status: 'pending',
             resultInvoice: null,
             errorMsg: null,
@@ -98,6 +99,7 @@ export default function Sign() {
       includeText: true,
       stampPosition: null,
       sigWidth: null,
+      stampAllPages: false,
       status: 'pending', // pending | signing | done | error
       resultInvoice: null,
       errorMsg: null,
@@ -130,7 +132,14 @@ export default function Sign() {
     if (key === 'project') setDocs((prev) => prev.map((d) => ({ ...d, project: activeDoc.project })));
     if (key === 'date') setDocs((prev) => prev.map((d) => ({ ...d, approvedDate: activeDoc.approvedDate })));
     if (key === 'stamp')
-      setDocs((prev) => prev.map((d) => ({ ...d, stampPosition: activeDoc.stampPosition, sigWidth: activeDoc.sigWidth })));
+      setDocs((prev) =>
+        prev.map((d) => ({
+          ...d,
+          stampPosition: activeDoc.stampPosition,
+          sigWidth: activeDoc.sigWidth,
+          stampAllPages: activeDoc.stampAllPages,
+        }))
+      );
   }
 
   function removeDoc(index) {
@@ -184,6 +193,7 @@ export default function Sign() {
           stampX: docs[i].stampPosition?.xPt,
           stampY: docs[i].stampPosition?.yPt,
           stampPage: docs[i].stampPosition?.page,
+          stampAllPages: docs[i].stampAllPages,
           includeText: docs[i].includeText,
           signerId,
           sigWidth: docs[i].sigWidth || undefined,
@@ -384,6 +394,16 @@ export default function Sign() {
                     style={{ width: 'auto' }}
                   />
                   <label style={{ margin: 0 }}>Include "Approved By / Date / Project" text</label>
+                </div>
+
+                <div className="field" style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <input
+                    type="checkbox"
+                    checked={activeDoc.stampAllPages}
+                    onChange={(e) => updateField('stampAllPages', e.target.checked, linkStamp)}
+                    style={{ width: 'auto' }}
+                  />
+                  <label style={{ margin: 0 }}>Stamp every page (same spot on each page)</label>
                 </div>
 
                 {activeDoc.status === 'done' && (
