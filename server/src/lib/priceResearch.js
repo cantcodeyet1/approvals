@@ -99,9 +99,9 @@ async function identifyFromImage(pdfBytes) {
               'its price if shown, ignoring company letterhead, VAT/registration numbers, and boilerplate terms. ' +
               'Respond with ONLY the JSON object matching the schema.',
           },
-          ...pageImages.map((png) => ({
+          ...pageImages.map((jpeg) => ({
             type: 'image_url',
-            image_url: { url: `data:image/png;base64,${Buffer.from(png).toString('base64')}` },
+            image_url: { url: `data:image/jpeg;base64,${Buffer.from(jpeg).toString('base64')}` },
           })),
         ],
       },
