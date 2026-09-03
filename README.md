@@ -11,8 +11,8 @@ An internal tool for stamping approved invoices (Approved By / Date / Project + 
 ## How it works
 
 1. Each account signs up, enters their full name, and draws a signature once (`/signature`). The signature is stored in Supabase Storage and reused on every invoice they approve.
-2. On **New Invoice**, you upload the invoice PDF, fill in Project + Date (Approved By is taken from your account), and optionally describe the line item to run a **market price check**.
-3. The price check panel is currently **mock data** — see `server/src/mock/priceSourcing.js`. It fabricates plausible search results and an AI-style summary so the UI/UX can be built and demoed now. It is clearly labeled "Demo data" everywhere it's shown and is **not wired to a real search API or LLM yet**. Swap that file for a real integration (e.g. a search API + an LLM call) before using this for real approval decisions.
+2. When signing an invoice, you fill in Project + Date (Approved By is taken from your saved signer), and can run a **market price check** with one click — no manual description needed.
+3. The price check reads the invoice PDF itself (`server/src/lib/textExtract.js`), asks Groq to identify the item being purchased, searches the real web via Tavily, then asks Groq again to synthesize a structured price comparison (`server/src/lib/priceResearch.js`). Requires `GROQ_API_KEY` and `TAVILY_API_KEY` (both have free tiers) in `server/.env`. It's labeled "AI estimate" in the UI — a helpful sanity check, not verified pricing.
 4. On submit, the server overlays "Approved By / Date / Project" + your signature onto the PDF (via `pdf-lib`) and stores both the original and stamped versions in Supabase Storage, with metadata in Postgres.
 
 ## Setup

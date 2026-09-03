@@ -152,10 +152,13 @@ export const api = {
       stamped_file_url: fileUrl(invoice.stamped_file_url),
     };
   },
-  checkPrice: ({ product, location, invoiceId }) =>
-    request('/api/price-check', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ product, location, invoiceId }),
-    }),
+  // Reads the invoice PDF itself to research comparable prices — no manual
+  // product description needed.
+  checkPrice: ({ file, location, invoiceId }) => {
+    const form = new FormData();
+    form.append('file', file);
+    if (location) form.append('location', location);
+    if (invoiceId) form.append('invoiceId', invoiceId);
+    return request('/api/price-check', { method: 'POST', body: form });
+  },
 };

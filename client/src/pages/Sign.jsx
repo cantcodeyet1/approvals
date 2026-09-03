@@ -149,15 +149,11 @@ export default function Sign() {
 
   async function handleCheckPrice() {
     setError(null);
-    if (!activeDoc.itemDescription.trim()) {
-      setError('Describe the item/product first so we can look up comparable prices');
-      return;
-    }
     setCheckingPrice(true);
     updateActiveDoc({ priceData: null });
     try {
       const [data] = await Promise.all([
-        api.checkPrice({ product: activeDoc.itemDescription, location: 'Johannesburg' }),
+        api.checkPrice({ file: activeDoc.file, location: 'Johannesburg' }),
         new Promise((resolve) => setTimeout(resolve, totalLoadingDuration(PRICE_CHECK_STEPS))),
       ]);
       updateActiveDoc({ priceData: data });
@@ -422,13 +418,16 @@ export default function Sign() {
 
               <div className="card">
                 <div className="field">
-                  <label>Item / product description</label>
+                  <label>Item / product note (optional)</label>
                   <textarea
                     rows={2}
                     value={activeDoc.itemDescription}
                     onChange={(e) => updateActiveDoc({ itemDescription: e.target.value })}
                     placeholder="e.g. Breathalizer monthly rental unit"
                   />
+                  <p className="helper-text" style={{ margin: 0 }}>
+                    Just a note for the invoice list — the price check below reads the document itself.
+                  </p>
                 </div>
                 <button type="button" className="btn btn-secondary" onClick={handleCheckPrice} disabled={checkingPrice} style={{ width: '100%' }}>
                   {checkingPrice ? 'Checking…' : 'Check market price (Johannesburg)'}

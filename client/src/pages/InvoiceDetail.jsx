@@ -89,15 +89,11 @@ export default function InvoiceDetail() {
 
   async function handleCheckPrice() {
     setError(null);
-    if (!itemDescription.trim()) {
-      setError('Describe the item/product first so we can look up comparable prices');
-      return;
-    }
     setCheckingPrice(true);
     setPriceData(null);
     try {
       const [data] = await Promise.all([
-        api.checkPrice({ product: itemDescription, location: 'Johannesburg' }),
+        api.checkPrice({ file: originalFile, location: 'Johannesburg' }),
         new Promise((resolve) => setTimeout(resolve, totalLoadingDuration(PRICE_CHECK_STEPS))),
       ]);
       setPriceData(data);
@@ -220,8 +216,11 @@ export default function InvoiceDetail() {
 
             <div className="card">
               <div className="field">
-                <label>Item / product description</label>
+                <label>Item / product note (optional)</label>
                 <textarea rows={2} value={itemDescription} onChange={(e) => setItemDescription(e.target.value)} />
+                <p className="helper-text" style={{ margin: 0 }}>
+                  Just a note for the invoice list — the price check below reads the document itself.
+                </p>
               </div>
               <button type="button" className="btn btn-secondary" onClick={handleCheckPrice} disabled={checkingPrice} style={{ width: '100%' }}>
                 {checkingPrice ? 'Checking…' : 'Check market price (Johannesburg)'}
