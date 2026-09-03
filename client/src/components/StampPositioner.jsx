@@ -150,17 +150,32 @@ export default function StampPositioner({
     const boxHpx = heightPt * pageInfo.scale;
     const marginPx = MARGIN_PT * pageInfo.scale;
 
-    const corners = [
-      { px: marginPx, py: marginPx },
-      { px: pageInfo.canvasW - boxWpx - marginPx, py: marginPx },
-      { px: marginPx, py: pageInfo.canvasH - boxHpx - marginPx },
-      { px: pageInfo.canvasW - boxWpx - marginPx, py: pageInfo.canvasH - boxHpx - marginPx },
-    ];
+    // Scan a grid of candidate spots across the whole page (not just the four
+    // corners) so the stamp lands wherever is actually empty, e.g. below a
+    // short table rather than always in a fixed corner.
+    const maxX = pageInfo.canvasW - boxWpx - marginPx;
+    const maxY = pageInfo.canvasH - boxHpx - marginPx;
+    const stepPx = Math.max(20, Math.min(boxWpx, boxHpx) / 2);
+    const candidates = [];
+    if (maxX >= marginPx && maxY >= marginPx) {
+      for (let py = marginPx; py <= maxY + 0.001; py += stepPx) {
+        for (let px = marginPx; px <= maxX + 0.001; px += stepPx) {
+          candidates.push({ px: Math.min(px, maxX), py: Math.min(py, maxY) });
+        }
+      }
+    }
+    if (candidates.length === 0) candidates.push({ px: marginPx, py: marginPx });
 
     const imageData = ctx.getImageData(0, 0, pageInfo.canvasW, pageInfo.canvasH);
-    const best = corners
-      .map((c) => ({ ...c, score: inkRatio(imageData, pageInfo.canvasW, pageInfo.canvasH, c.px, c.py, boxWpx, boxHpx) }))
-      .sort((a, b) => a.score - b.score)[0];
+    const scored = candidates.map((c) => ({
+      ...c,
+      score: inkRatio(imageData, pageInfo.canvasW, pageInfo.canvasH, c.px, c.py, boxWpx, boxHpx),
+    }));
+    const minScore = Math.min(...scored.map((c) => c.score));
+    // Among the emptiest spots, prefer the one closest to the bottom-right —
+    // the conventional place to sign — instead of an arbitrary empty gap.
+    const emptiest = scored.filter((c) => c.score <= minScore + 0.01);
+    const best = emptiest.sort((a, b) => b.py + b.px - (a.py + a.px))[0];
 
     applyPixelPosition(best.px, best.py, pageInfo);
   }, [pageInfo, signatureUrl, sigWidthPt, approvedBy, date, project, includeText]);

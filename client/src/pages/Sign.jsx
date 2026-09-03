@@ -5,7 +5,7 @@ import StampPositioner from '../components/StampPositioner.jsx';
 import PriceCheckPanel from '../components/PriceCheckPanel.jsx';
 import LoadingSteps, { totalLoadingDuration } from '../components/LoadingSteps.jsx';
 import { DownloadIcon, BackArrowIcon } from '../components/icons.jsx';
-import { PageLoading } from '../components/Spinner.jsx';
+import Spinner, { PageLoading } from '../components/Spinner.jsx';
 import Select from '../components/Select.jsx';
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -31,9 +31,16 @@ export default function Sign() {
   const [docs, setDocs] = useState([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [signing, setSigning] = useState(false);
-  const [loadingPending, setLoadingPending] = useState(false);
+  const [signedCount, setSignedCount] = useState(0);
+  const [loadingPending, setLoadingPending] = useState(() => Boolean(searchParams.get('ids')));
   const [checkingPrice, setCheckingPrice] = useState(false);
   const [error, setError] = useState(null);
+
+  // When multiple documents are loaded, these fields are shared across all of
+  // them by default (editing one edits all) until switched off per field.
+  const [linkProject, setLinkProject] = useState(true);
+  const [linkDate, setLinkDate] = useState(true);
+  const [linkStamp, setLinkStamp] = useState(true);
 
   useEffect(() => {
     Promise.all([api.listSigners(), api.listProjects()]).then(async ([signerList, projectList]) => {
@@ -103,6 +110,29 @@ export default function Sign() {
     setDocs((prev) => prev.map((d, i) => (i === activeIndex ? { ...d, ...patch } : d)));
   }
 
+  // Applies a field change to every document when that field is "linked"
+  // (the default for a batch), or just the active document when it isn't.
+  function updateField(field, value, linked) {
+    if (docs.length > 1 && linked) {
+      setDocs((prev) => prev.map((d) => ({ ...d, [field]: value })));
+    } else {
+      updateActiveDoc({ [field]: value });
+    }
+  }
+
+  // Toggling a field back to "linked" re-syncs every document to the active
+  // document's current value, so the link's meaning stays obvious.
+  function setLinkField(key, checked) {
+    if (key === 'project') setLinkProject(checked);
+    if (key === 'date') setLinkDate(checked);
+    if (key === 'stamp') setLinkStamp(checked);
+    if (!checked) return;
+    if (key === 'project') setDocs((prev) => prev.map((d) => ({ ...d, project: activeDoc.project })));
+    if (key === 'date') setDocs((prev) => prev.map((d) => ({ ...d, approvedDate: activeDoc.approvedDate })));
+    if (key === 'stamp')
+      setDocs((prev) => prev.map((d) => ({ ...d, stampPosition: activeDoc.stampPosition, sigWidth: activeDoc.sigWidth })));
+  }
+
   function removeDoc(index) {
     setDocs((prev) => prev.filter((_, i) => i !== index));
     setActiveIndex((prev) => Math.max(0, Math.min(prev, docs.length - 2)));
@@ -142,6 +172,7 @@ export default function Sign() {
     }
 
     setSigning(true);
+    setSignedCount(docs.filter((d) => d.status === 'done').length);
     for (let i = 0; i < docs.length; i++) {
       if (docs[i].status === 'done') continue;
       setDocs((prev) => prev.map((d, idx) => (idx === i ? { ...d, status: 'signing' } : d)));
@@ -165,6 +196,7 @@ export default function Sign() {
       } catch (err) {
         setDocs((prev) => prev.map((d, idx) => (idx === i ? { ...d, status: 'error', errorMsg: err.message } : d)));
       }
+      setSignedCount((n) => n + 1);
     }
     setSigning(false);
   }
@@ -193,17 +225,11 @@ export default function Sign() {
       {error && <div className="error-banner">{error}</div>}
 
       {docs.length === 0 ? (
-        <div className="card">
-          <label className="btn btn-primary" style={{ width: 'fit-content', cursor: 'pointer' }}>
-            Choose files to sign
-            <input
-              type="file"
-              accept="application/pdf"
-              multiple
-              onChange={(e) => handleFilesSelected(e.target.files)}
-              style={{ display: 'none' }}
-            />
-          </label>
+        <div className="card empty-state">
+          Nothing to sign yet.
+          <button type="button" className="btn-ghost" onClick={() => navigate('/')} style={{ marginLeft: 8 }}>
+            Back to invoices
+          </button>
         </div>
       ) : (
         <>
@@ -240,11 +266,37 @@ export default function Sign() {
                   {activeDoc.status}
                 </span>
               </div>
+              {signing && (
+                <div style={{ marginTop: 14 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <span className="helper-text" style={{ margin: 0 }}>
+                      Signing {Math.min(signedCount + 1, docs.length)} of {docs.length}…
+                    </span>
+                    <span className="helper-text" style={{ margin: 0 }}>
+                      {signedCount} of {docs.length} done
+                    </span>
+                  </div>
+                  <div className="progress-bar">
+                    <div className="progress-bar-fill" style={{ width: `${(signedCount / docs.length) * 100}%` }} />
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
           <div className="sign-layout">
             <div className="card">
+              {multiple && (
+                <label className="link-toggle" style={{ marginBottom: 10 }}>
+                  <input
+                    type="checkbox"
+                    checked={linkStamp}
+                    onChange={(e) => setLinkField('stamp', e.target.checked)}
+                    style={{ width: 'auto' }}
+                  />
+                  Apply stamp position &amp; size to all documents
+                </label>
+              )}
               <StampPositioner
                 file={activeDoc.file}
                 approvedBy={activeSigner?.full_name}
@@ -252,10 +304,10 @@ export default function Sign() {
                 project={activeDoc.project}
                 signatureUrl={activeSigner?.signature_url}
                 sigWidthPt={activeDoc.sigWidth || activeSigner?.signature_width}
-                onResizeSignature={(w) => updateActiveDoc({ sigWidth: w })}
+                onResizeSignature={(w) => updateField('sigWidth', w, linkStamp)}
                 includeText={activeDoc.includeText}
                 value={activeDoc.stampPosition}
-                onChange={(pos) => updateActiveDoc({ stampPosition: pos })}
+                onChange={(pos) => updateField('stampPosition', pos, linkStamp)}
               />
 
               {activeDoc.status === 'error' && <div className="error-banner">{activeDoc.errorMsg}</div>}
@@ -280,18 +332,48 @@ export default function Sign() {
                 </div>
 
                 <div className="field">
-                  <label>Project</label>
+                  <div className="field-label-row">
+                    <label style={{ margin: 0 }}>Project</label>
+                    {multiple && (
+                      <label className="link-toggle">
+                        <input
+                          type="checkbox"
+                          checked={linkProject}
+                          onChange={(e) => setLinkField('project', e.target.checked)}
+                          style={{ width: 'auto' }}
+                        />
+                        Apply to all
+                      </label>
+                    )}
+                  </div>
                   <Select
                     value={activeDoc.project || null}
-                    onChange={(v) => updateActiveDoc({ project: v })}
+                    onChange={(v) => updateField('project', v, linkProject)}
                     placeholder="Select a project"
                     options={projects.map((p) => ({ value: p.name, label: p.name }))}
                   />
                 </div>
 
                 <div className="field">
-                  <label>Date</label>
-                  <input type="date" value={activeDoc.approvedDate} onChange={(e) => updateActiveDoc({ approvedDate: e.target.value })} />
+                  <div className="field-label-row">
+                    <label style={{ margin: 0 }}>Date</label>
+                    {multiple && (
+                      <label className="link-toggle">
+                        <input
+                          type="checkbox"
+                          checked={linkDate}
+                          onChange={(e) => setLinkField('date', e.target.checked)}
+                          style={{ width: 'auto' }}
+                        />
+                        Apply to all
+                      </label>
+                    )}
+                  </div>
+                  <input
+                    type="date"
+                    value={activeDoc.approvedDate}
+                    onChange={(e) => updateField('approvedDate', e.target.value, linkDate)}
+                  />
                 </div>
 
                 <div className="field" style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -341,7 +423,16 @@ export default function Sign() {
               </label>
 
               <button type="button" className="btn btn-primary" onClick={handleSignAll} disabled={signing}>
-                {signing ? 'Signing…' : multiple ? `Sign all ${docs.length} documents` : 'Sign 1 document'}
+                {signing ? (
+                  <>
+                    <Spinner size={14} />
+                    Signing {Math.min(signedCount + 1, docs.length)} of {docs.length}…
+                  </>
+                ) : multiple ? (
+                  `Sign all ${docs.length} documents`
+                ) : (
+                  'Sign 1 document'
+                )}
               </button>
 
               {allDone && (

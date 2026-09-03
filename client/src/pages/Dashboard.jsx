@@ -6,7 +6,7 @@ import { DownloadIcon, TrashIcon } from '../components/icons.jsx';
 import { PageLoading } from '../components/Spinner.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import Select from '../components/Select.jsx';
-import { formatDate, formatDateTime, greeting } from '../lib/format';
+import { formatDateTime, greeting } from '../lib/format';
 
 const FILTERS = [
   { value: 'all', label: 'All' },
@@ -194,6 +194,7 @@ export default function Dashboard() {
             <div className="selection-pill">
               <span>{selectedPending.length} selected</span>
               <button onClick={() => navigate(`/sign?ids=${selectedPending.join(',')}`)}>Sign →</button>
+              <span className="pill-divider" />
               <button className="danger-link" onClick={() => requestBulkDelete(selectedPending)}>
                 Delete →
               </button>
@@ -203,6 +204,7 @@ export default function Dashboard() {
             <div className="selection-pill">
               <span>{selectedApproved.length} selected</span>
               <a href={downloadHref(selectedApproved)}>Download →</a>
+              <span className="pill-divider" />
               <button className="danger-link" onClick={() => requestBulkDelete(selectedApproved)}>
                 Delete →
               </button>
@@ -243,11 +245,11 @@ export default function Dashboard() {
                     </div>
                   ) : (
                     <div className="invoice-row-text">
-                      <div className="invoice-row-title">{inv.project}</div>
+                      <div className="invoice-row-title">{(inv.original_filename || 'Untitled document').replace(/\.pdf$/i, '')}</div>
                       <div className="invoice-row-meta">
-                        Approved by {inv.approved_by} on {inv.approved_date}
+                        {inv.project}
                         {inv.item_description ? ` · ${inv.item_description}` : ''}
-                        {inv.signed_at ? ` · Signed ${formatDate(inv.signed_at)}` : ''}
+                        {inv.signed_at ? ` · Signed ${formatDateTime(inv.signed_at)}` : ''}
                       </div>
                     </div>
                   )}

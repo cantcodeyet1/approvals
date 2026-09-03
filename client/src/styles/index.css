@@ -142,7 +142,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 100vh;
+  padding: 96px 0;
   color: var(--text-muted);
 }
 
@@ -322,6 +322,24 @@ body {
   color: var(--text-muted);
 }
 
+.field-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.link-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
 input[type='text'],
 input[type='date'],
 input[type='email'],
@@ -487,9 +505,10 @@ select:focus {
 .spinner {
   display: inline-block;
   border-radius: 50%;
-  border: 2.5px solid var(--border);
-  border-top-color: var(--accent);
-  animation: spinner-rotate 0.7s linear infinite;
+  background: conic-gradient(from 0deg, var(--accent), transparent 65%);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2.5px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2.5px));
+  animation: spinner-rotate 0.85s cubic-bezier(0.55, 0.15, 0.45, 0.85) infinite;
   flex-shrink: 0;
 }
 
@@ -497,6 +516,21 @@ select:focus {
   to {
     transform: rotate(360deg);
   }
+}
+
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 0.3s ease;
 }
 
 .page-loading {
@@ -1022,6 +1056,13 @@ select:focus {
 
 .selection-pill button.danger-link {
   color: var(--danger);
+  margin-left: 4px;
+}
+
+.selection-pill .pill-divider {
+  width: 1px;
+  height: 16px;
+  background: var(--border);
 }
 
 .signature-preview-well {
