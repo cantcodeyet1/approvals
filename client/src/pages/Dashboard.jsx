@@ -5,6 +5,7 @@ import StatusPill from '../components/StatusPill.jsx';
 import { DownloadIcon, TrashIcon } from '../components/icons.jsx';
 import { PageLoading } from '../components/Spinner.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
+import SendEmailDialog from '../components/SendEmailDialog.jsx';
 import Select from '../components/Select.jsx';
 import { formatDateTime, greeting } from '../lib/format';
 
@@ -85,6 +86,8 @@ export default function Dashboard() {
       refresh();
     }
   }
+
+  const [emailDialogIds, setEmailDialogIds] = useState(null);
 
   function toggleSelected(e, id) {
     e.stopPropagation();
@@ -204,6 +207,7 @@ export default function Dashboard() {
             <div className="selection-pill">
               <span>{selectedApproved.length} selected</span>
               <a href={downloadHref(selectedApproved)}>Download →</a>
+              <button onClick={() => setEmailDialogIds(selectedApproved)}>Send via email →</button>
               <span className="pill-divider" />
               <button className="danger-link" onClick={() => requestBulkDelete(selectedApproved)}>
                 Delete →
@@ -294,6 +298,13 @@ export default function Dashboard() {
         danger
         onConfirm={confirmDiscard}
         onCancel={() => setConfirmDelete(null)}
+      />
+
+      <SendEmailDialog
+        open={!!emailDialogIds}
+        invoiceIds={emailDialogIds || []}
+        invoices={invoices}
+        onClose={() => setEmailDialogIds(null)}
       />
     </div>
   );

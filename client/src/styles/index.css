@@ -571,6 +571,11 @@ select:focus {
   animation: confirm-dialog-in 0.18s ease;
 }
 
+.confirm-dialog.email-dialog {
+  max-width: 460px;
+  text-align: left;
+}
+
 @keyframes confirm-dialog-in {
   from {
     opacity: 0;

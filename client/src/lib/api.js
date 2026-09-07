@@ -161,4 +161,13 @@ export const api = {
     if (invoiceId) form.append('invoiceId', invoiceId);
     return request('/api/price-check', { method: 'POST', body: form });
   },
+  // Whether a real email provider is configured server-side, so the UI can
+  // offer a real send or fall back to download + mailto: accordingly.
+  getEmailStatus: () => request('/api/email/status'),
+  sendInvoiceEmail: ({ ids, to, cc, subject, body }) =>
+    request('/api/email/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids, to, cc, subject, body }),
+    }),
 };

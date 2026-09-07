@@ -5,6 +5,7 @@ import invoicesRouter from './routes/invoices.js';
 import signersRouter from './routes/signers.js';
 import priceCheckRouter from './routes/priceCheck.js';
 import projectsRouter from './routes/projects.js';
+import emailRouter from './routes/email.js';
 
 const app = express();
 const port = process.env.PORT || 4000;
@@ -18,6 +19,7 @@ app.use('/api/invoices', invoicesRouter);
 app.use('/api/signers', signersRouter);
 app.use('/api/price-check', priceCheckRouter);
 app.use('/api/projects', projectsRouter);
+app.use('/api/email', emailRouter);
 
 app.use((err, req, res, next) => {
   console.error(err);
