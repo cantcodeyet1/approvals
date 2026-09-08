@@ -54,6 +54,7 @@ export default function StampPositioner({
 }) {
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
+  const outerRef = useRef(null);
   const dragState = useRef(null);
   const resizeState = useRef(null);
   const pdfRef = useRef(null);
@@ -63,6 +64,25 @@ export default function StampPositioner({
   const [boxSizePt, setBoxSizePt] = useState({ width: 180, height: LINE_HEIGHT_PT * 3 + 40 });
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
+  // The canvas always renders at native (CANVAS_TARGET_WIDTH-based) resolution
+  // — on a narrow phone screen it's then visually shrunk by this one uniform
+  // CSS scale, applied to the canvas and the drag overlay together, so their
+  // coordinate spaces never diverge. Without this, a container narrower than
+  // the native render width (any phone) clips or mispositions the overlay —
+  // it's computed in native pixels, the container isn't.
+  const [availableWidth, setAvailableWidth] = useState(CANVAS_TARGET_WIDTH);
+
+  useEffect(() => {
+    const el = outerRef.current;
+    if (!el) return;
+    const update = () => setAvailableWidth(el.clientWidth);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const displayScale = pageInfo ? Math.min(1, availableWidth / pageInfo.canvasW) : 1;
 
   const lines = includeText ? [`Approved By: ${approvedBy}`, `Date: ${date}`, `Project: ${project || 'Unassigned'}`] : [];
 
@@ -224,8 +244,10 @@ export default function StampPositioner({
     if (!dragState.current || !pageInfo) return;
     const boxWpx = boxSizePt.width * pageInfo.scale;
     const boxHpx = boxSizePt.height * pageInfo.scale;
-    const dx = e.clientX - dragState.current.startClientX;
-    const dy = e.clientY - dragState.current.startClientY;
+    // Pointer coordinates are in real (post-scale) screen pixels; our stored
+    // positions are in native (pre-scale) canvas pixels — convert.
+    const dx = (e.clientX - dragState.current.startClientX) / displayScale;
+    const dy = (e.clientY - dragState.current.startClientY) / displayScale;
     let px = dragState.current.startPx + dx;
     let py = dragState.current.startPy + dy;
     px = Math.min(Math.max(px, 0), Math.max(pageInfo.canvasW - boxWpx, 0));
@@ -251,7 +273,7 @@ export default function StampPositioner({
   function handleResizeMove(e) {
     if (!resizeState.current || !pageInfo || !onResizeSignature) return;
     e.stopPropagation();
-    const dx = (e.clientX - resizeState.current.startClientX) / pageInfo.scale;
+    const dx = (e.clientX - resizeState.current.startClientX) / displayScale / pageInfo.scale;
     const nextWidth = Math.min(Math.max(Math.round(resizeState.current.startWidth + dx), 40), 220);
     onResizeSignature(nextWidth);
   }
@@ -295,78 +317,95 @@ export default function StampPositioner({
 
       {error && <div className="error-banner">{error}</div>}
 
-      <div ref={containerRef} style={{ position: 'relative', display: 'inline-block', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
-        <canvas ref={canvasRef} style={{ display: 'block', maxWidth: '100%' }} />
-        {loading && (
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, color: 'var(--text-muted)', fontSize: 13 }}>
-            <Spinner size={16} />
-            Rendering preview…
-          </div>
-        )}
-        {pixelPos && pageInfo && (
+      <div ref={outerRef} style={{ width: '100%' }}>
+        <div
+          style={{
+            position: 'relative',
+            width: pageInfo ? pageInfo.canvasW * displayScale : '100%',
+            height: pageInfo ? pageInfo.canvasH * displayScale : 400,
+            maxWidth: '100%',
+            border: '1px solid var(--border)',
+            borderRadius: 8,
+            overflow: 'hidden',
+          }}
+        >
           <div
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            style={{
-              position: 'absolute',
-              left: pixelPos.px,
-              top: pixelPos.py,
-              width: boxSizePt.width * pageInfo.scale,
-              height: boxSizePt.height * pageInfo.scale,
-              background: 'rgba(255, 255, 255, 0.75)',
-              border: '1.5px dashed #b91c8c',
-              borderRadius: 4,
-              cursor: 'grab',
-              padding: 2,
-              touchAction: 'none',
-              userSelect: 'none',
-            }}
+            ref={containerRef}
+            style={{ position: 'absolute', top: 0, left: 0, transform: `scale(${displayScale})`, transformOrigin: 'top left' }}
           >
-            {lines.map((line, i) => (
-              <div
-                key={i}
-                style={{
-                  fontSize: FONT_SIZE_PT * pageInfo.scale * 0.92,
-                  lineHeight: `${LINE_HEIGHT_PT * pageInfo.scale}px`,
-                  color: '#b81c8c',
-                  fontFamily: 'Helvetica, Arial, sans-serif',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {line}
+            <canvas ref={canvasRef} style={{ display: 'block' }} />
+            {loading && (
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, color: 'var(--text-muted)', fontSize: 13 }}>
+                <Spinner size={16} />
+                Rendering preview…
               </div>
-            ))}
-            {signatureUrl && (
-              <img
-                src={signatureUrl}
-                alt=""
-                draggable={false}
-                style={{ width: sigWidthPt * pageInfo.scale, marginTop: 2, pointerEvents: 'none' }}
-              />
             )}
-            {onResizeSignature && (
+            {pixelPos && pageInfo && (
               <div
-                onPointerDown={handleResizeDown}
-                onPointerMove={handleResizeMove}
-                onPointerUp={handleResizeUp}
-                title="Drag to resize the signature"
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
                 style={{
                   position: 'absolute',
-                  right: -6,
-                  bottom: -6,
-                  width: 14,
-                  height: 14,
-                  borderRadius: '50%',
-                  background: '#b91c8c',
-                  border: '2px solid white',
-                  cursor: 'nwse-resize',
+                  left: pixelPos.px,
+                  top: pixelPos.py,
+                  width: boxSizePt.width * pageInfo.scale,
+                  height: boxSizePt.height * pageInfo.scale,
+                  background: 'rgba(255, 255, 255, 0.75)',
+                  border: '1.5px dashed #b91c8c',
+                  borderRadius: 4,
+                  cursor: 'grab',
+                  padding: 2,
                   touchAction: 'none',
+                  userSelect: 'none',
                 }}
-              />
+              >
+                {lines.map((line, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      fontSize: FONT_SIZE_PT * pageInfo.scale * 0.92,
+                      lineHeight: `${LINE_HEIGHT_PT * pageInfo.scale}px`,
+                      color: '#b81c8c',
+                      fontFamily: 'Helvetica, Arial, sans-serif',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {line}
+                  </div>
+                ))}
+                {signatureUrl && (
+                  <img
+                    src={signatureUrl}
+                    alt=""
+                    draggable={false}
+                    style={{ width: sigWidthPt * pageInfo.scale, marginTop: 2, pointerEvents: 'none' }}
+                  />
+                )}
+                {onResizeSignature && (
+                  <div
+                    onPointerDown={handleResizeDown}
+                    onPointerMove={handleResizeMove}
+                    onPointerUp={handleResizeUp}
+                    title="Drag to resize the signature"
+                    style={{
+                      position: 'absolute',
+                      right: -6,
+                      bottom: -6,
+                      width: 14,
+                      height: 14,
+                      borderRadius: '50%',
+                      background: '#b91c8c',
+                      border: '2px solid white',
+                      cursor: 'nwse-resize',
+                      touchAction: 'none',
+                    }}
+                  />
+                )}
+              </div>
             )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
