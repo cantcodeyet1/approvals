@@ -1,8 +1,20 @@
-import { NavLink } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import ThemeToggle from './ThemeToggle.jsx';
 import { GearIcon } from './icons.jsx';
 
 export default function Navbar() {
+  const location = useLocation();
+  const isApprovedFilter = new URLSearchParams(location.search).get('filter') === 'approved';
+  const onDashboard = location.pathname === '/';
+  const onSettings = location.pathname === '/settings';
+
+  const tabs = [
+    { to: '/', label: 'Dashboard', active: onDashboard && !isApprovedFilter },
+    { to: '/settings#projects', label: 'Projects', active: onSettings && location.hash === '#projects' },
+    { to: '/settings#signers', label: 'Signers', active: onSettings && location.hash === '#signers' },
+    { to: '/?filter=approved', label: 'History', active: onDashboard && isApprovedFilter },
+  ];
+
   return (
     <header className="navbar">
       <div className="navbar-left">
@@ -15,9 +27,11 @@ export default function Navbar() {
           Approvals
         </NavLink>
         <nav className="navbar-tabs">
-          <NavLink to="/" end className={({ isActive }) => (isActive ? 'active' : '')}>
-            Dashboard
-          </NavLink>
+          {tabs.map((tab) => (
+            <Link key={tab.label} to={tab.to} className={tab.active ? 'active' : ''}>
+              {tab.label}
+            </Link>
+          ))}
         </nav>
       </div>
       <nav className="navbar-links">

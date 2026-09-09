@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api, downloadUrl, downloadHref } from '../lib/api';
 import StatusPill from '../components/StatusPill.jsx';
 import { DownloadIcon, TrashIcon, FileIcon } from '../components/icons.jsx';
@@ -17,8 +17,9 @@ const FILTERS = [
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [invoices, setInvoices] = useState([]);
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState(() => (searchParams.get('filter') === 'approved' ? 'approved' : 'all'));
   const [projectFilter, setProjectFilter] = useState('all');
   const [signedDateFilter, setSignedDateFilter] = useState('');
   const [selected, setSelected] = useState(() => new Set());
@@ -38,6 +39,14 @@ export default function Dashboard() {
   useEffect(() => {
     refresh();
   }, []);
+
+  // The "History" nav link points here with ?filter=approved — since it's
+  // the same route, React Router doesn't remount this component, so the
+  // filter tab has to react to the search param changing, not just read it
+  // once on first mount.
+  useEffect(() => {
+    if (searchParams.get('filter') === 'approved') setFilter('approved');
+  }, [searchParams]);
 
   async function handleLoadDocuments(fileList) {
     setError(null);

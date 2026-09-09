@@ -31,8 +31,8 @@
     --surface: oklch(17% 0.01 245);
     --surface-2: oklch(21% 0.012 245);
     --border: oklch(27% 0.014 245);
-    --text: oklch(93% 0.006 130);
-    --text-muted: oklch(63% 0.014 150);
+    --text: oklch(93% 0.006 245);
+    --text-muted: oklch(64% 0.014 245);
     --accent: oklch(84% 0.19 162);
     --accent-hover: oklch(89% 0.18 162);
     --accent-soft: oklch(27% 0.06 162);
@@ -138,6 +138,10 @@ body {
   max-width: 1140px;
 }
 
+.app-main:has(.doc-table) {
+  max-width: 1280px;
+}
+
 .page-loading {
   display: flex;
   align-items: center;
@@ -166,6 +170,8 @@ body {
   display: flex;
   align-items: center;
   gap: 26px;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .navbar-brand {
@@ -177,6 +183,7 @@ body {
   letter-spacing: -0.01em;
   color: var(--text);
   text-decoration: none;
+  flex-shrink: 0;
 }
 
 .navbar-brand-mark {
@@ -196,6 +203,14 @@ body {
   align-items: center;
   height: 100%;
   gap: 4px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.navbar-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .navbar-tabs a {
@@ -225,6 +240,7 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-shrink: 0;
 }
 
 /* Compact, "lightened" stat strip — a couple of real numbers, no charts */
@@ -1136,6 +1152,7 @@ select:focus {
   font-weight: 700;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--border);
+  scroll-margin-top: 76px;
 }
 
 .segmented-control {

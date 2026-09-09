@@ -26,6 +26,16 @@ export default function Settings() {
       .finally(() => setLoading(false));
   }, []);
 
+  // The page shows only a loading spinner until data arrives, so the
+  // #signers/#projects targets don't exist yet when the browser tries its
+  // own hash-scroll on navigation — do it ourselves once they're rendered.
+  useEffect(() => {
+    if (loading) return;
+    const hash = window.location.hash.slice(1);
+    if (!hash) return;
+    document.getElementById(hash)?.scrollIntoView({ block: 'start' });
+  }, [loading]);
+
   function handleSignerSaved(updated) {
     setSigners((prev) => {
       const exists = prev.some((s) => s.id === updated.id);
@@ -77,7 +87,7 @@ export default function Settings() {
 
       {error && <div className="error-banner">{error}</div>}
 
-      <h3 className="settings-section-title" style={{ marginTop: 0 }}>
+      <h3 id="signers" className="settings-section-title" style={{ marginTop: 0 }}>
         Signers
       </h3>
       <p className="helper-text" style={{ marginTop: -6 }}>
@@ -98,7 +108,7 @@ export default function Settings() {
         </button>
       )}
 
-      <h3 className="settings-section-title" style={{ marginTop: 40 }}>
+      <h3 id="projects" className="settings-section-title" style={{ marginTop: 40 }}>
         Projects
       </h3>
       <p className="helper-text" style={{ marginTop: -6 }}>
