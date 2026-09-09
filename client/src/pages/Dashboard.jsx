@@ -127,6 +127,7 @@ export default function Dashboard() {
   const selectedApproved = [...selected].filter((id) => invoices.find((inv) => inv.id === id)?.status === 'approved');
   const selectedPending = [...selected].filter((id) => invoices.find((inv) => inv.id === id)?.status === 'pending');
   const pendingCount = invoices.filter((inv) => inv.status === 'pending').length;
+  const approvedCount = invoices.filter((inv) => inv.status === 'approved').length;
 
   return (
     <div>
@@ -137,6 +138,18 @@ export default function Dashboard() {
             {pendingCount === 0 ? 'Nothing is waiting for you right now.' : `${pendingCount} document${pendingCount === 1 ? ' is' : 's are'} waiting for you.`}
           </p>
         </div>
+        {invoices.length > 0 && (
+          <div className="stat-strip">
+            <div className="stat-chip">
+              <span className="stat-v">{pendingCount}</span>
+              <span className="stat-l">Waiting</span>
+            </div>
+            <div className="stat-chip">
+              <span className="stat-v">{approvedCount}</span>
+              <span className="stat-l">Approved</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {error && <div className="error-banner">{error}</div>}
