@@ -17,9 +17,16 @@ const FILTERS = [
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [invoices, setInvoices] = useState([]);
-  const [filter, setFilter] = useState(() => (searchParams.get('filter') === 'approved' ? 'approved' : 'all'));
+  // The URL is the source of truth for which tab is selected — not a
+  // separate piece of state — so a tab click and a link like
+  // /?filter=approved (from the History nav item) can never drift apart.
+  const rawFilter = searchParams.get('filter');
+  const filter = rawFilter === 'approved' || rawFilter === 'pending' ? rawFilter : 'all';
+  function setFilter(value) {
+    setSearchParams(value === 'all' ? {} : { filter: value }, { replace: true });
+  }
   const [projectFilter, setProjectFilter] = useState('all');
   const [signedDateFilter, setSignedDateFilter] = useState('');
   const [selected, setSelected] = useState(() => new Set());
@@ -39,14 +46,6 @@ export default function Dashboard() {
   useEffect(() => {
     refresh();
   }, []);
-
-  // The "History" nav link points here with ?filter=approved — since it's
-  // the same route, React Router doesn't remount this component, so the
-  // filter tab has to react to the search param changing, not just read it
-  // once on first mount.
-  useEffect(() => {
-    if (searchParams.get('filter') === 'approved') setFilter('approved');
-  }, [searchParams]);
 
   async function handleLoadDocuments(fileList) {
     setError(null);
