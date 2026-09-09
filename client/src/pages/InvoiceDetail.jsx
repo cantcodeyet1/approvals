@@ -5,7 +5,7 @@ import { DownloadIcon, BackArrowIcon, PencilIcon } from '../components/icons.jsx
 import { PageLoading } from '../components/Spinner.jsx';
 import { formatDateTime } from '../lib/format';
 import StampPositioner from '../components/StampPositioner.jsx';
-import PriceCheckPanel from '../components/PriceCheckPanel.jsx';
+import PriceCheckPopover from '../components/PriceCheckPopover.jsx';
 import LoadingSteps, { totalLoadingDuration } from '../components/LoadingSteps.jsx';
 import Select from '../components/Select.jsx';
 
@@ -220,19 +220,12 @@ export default function InvoiceDetail() {
             </div>
 
             <div className="card">
-              <div className="field">
-                <label>Item / product note (optional)</label>
-                <textarea rows={2} value={itemDescription} onChange={(e) => setItemDescription(e.target.value)} />
-                <p className="helper-text" style={{ margin: 0 }}>
-                  Just a note for the invoice list — the price check below reads the document itself.
-                </p>
-              </div>
               <button type="button" className="btn btn-secondary" onClick={handleCheckPrice} disabled={checkingPrice} style={{ width: '100%' }}>
                 {checkingPrice ? 'Checking…' : 'Check market price (Johannesburg)'}
               </button>
               <LoadingSteps steps={PRICE_CHECK_STEPS} active={checkingPrice} />
-              <PriceCheckPanel data={priceData} />
             </div>
+            <PriceCheckPopover open={!!priceData} data={priceData} onClose={() => setPriceData(null)} />
 
             <button className="btn btn-primary" onClick={handleSaveEdit} disabled={saving}>
               {saving ? 'Saving…' : 'Save changes'}

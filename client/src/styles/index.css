@@ -636,6 +636,33 @@ select:focus {
   gap: 10px;
 }
 
+/* Skeleton loading — reads as "actively working" much better than a
+   static spinner, and previews the shape of what's coming. */
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.skeleton {
+  display: block;
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--border) 50%, var(--surface-2) 75%);
+  background-size: 300% 100%;
+  animation: skeleton-shimmer 1.3s linear infinite;
+  border-radius: 4px;
+}
+
+.doc-row.skeleton-row {
+  cursor: default;
+}
+
+.doc-row.skeleton-row:hover {
+  background: none;
+}
+
 /* Confirm dialog */
 .confirm-overlay {
   position: fixed;
@@ -673,6 +700,29 @@ select:focus {
 .confirm-dialog.email-dialog {
   max-width: 460px;
   text-align: left;
+}
+
+.confirm-dialog.price-popover {
+  max-width: 560px;
+  text-align: left;
+  position: relative;
+  padding: 24px;
+}
+
+.price-popover-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+}
+
+.price-popover-body {
+  max-height: 72vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.price-popover-body .price-panel {
+  margin-top: 0;
 }
 
 @keyframes confirm-dialog-in {

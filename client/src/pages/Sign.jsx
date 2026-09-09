@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api, downloadUrl, downloadHref } from '../lib/api';
 import StampPositioner from '../components/StampPositioner.jsx';
-import PriceCheckPanel from '../components/PriceCheckPanel.jsx';
+import PriceCheckPopover from '../components/PriceCheckPopover.jsx';
 import LoadingSteps, { totalLoadingDuration } from '../components/LoadingSteps.jsx';
 import { DownloadIcon, BackArrowIcon } from '../components/icons.jsx';
 import Spinner, { PageLoading } from '../components/Spinner.jsx';
@@ -417,24 +417,12 @@ export default function Sign() {
               </div>
 
               <div className="card">
-                <div className="field">
-                  <label>Item / product note (optional)</label>
-                  <textarea
-                    rows={2}
-                    value={activeDoc.itemDescription}
-                    onChange={(e) => updateActiveDoc({ itemDescription: e.target.value })}
-                    placeholder="e.g. Breathalizer monthly rental unit"
-                  />
-                  <p className="helper-text" style={{ margin: 0 }}>
-                    Just a note for the invoice list — the price check below reads the document itself.
-                  </p>
-                </div>
                 <button type="button" className="btn btn-secondary" onClick={handleCheckPrice} disabled={checkingPrice} style={{ width: '100%' }}>
                   {checkingPrice ? 'Checking…' : 'Check market price (Johannesburg)'}
                 </button>
                 <LoadingSteps steps={PRICE_CHECK_STEPS} active={checkingPrice} />
-                <PriceCheckPanel data={activeDoc.priceData} />
               </div>
+              <PriceCheckPopover open={!!activeDoc.priceData} data={activeDoc.priceData} onClose={() => updateActiveDoc({ priceData: null })} />
 
               <label className="btn btn-secondary" style={{ cursor: 'pointer' }}>
                 Add more files

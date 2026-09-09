@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api, downloadUrl, downloadHref } from '../lib/api';
 import StatusPill from '../components/StatusPill.jsx';
 import { DownloadIcon, TrashIcon, FileIcon } from '../components/icons.jsx';
-import { PageLoading } from '../components/Spinner.jsx';
+import SkeletonRows from '../components/SkeletonRows.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import SendEmailDialog from '../components/SendEmailDialog.jsx';
 import Select from '../components/Select.jsx';
@@ -189,15 +189,13 @@ export default function Dashboard() {
           ))}
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {projects.length > 0 && (
-            <div style={{ width: 180 }}>
-              <Select
-                value={projectFilter}
-                onChange={setProjectFilter}
-                options={[{ value: 'all', label: 'All projects' }, ...projects.map((p) => ({ value: p, label: p }))]}
-              />
-            </div>
-          )}
+          <div style={{ width: 180, flexShrink: 0 }}>
+            <Select
+              value={projectFilter}
+              onChange={setProjectFilter}
+              options={[{ value: 'all', label: 'All projects' }, ...projects.map((p) => ({ value: p, label: p }))]}
+            />
+          </div>
           <input
             type="date"
             value={signedDateFilter}
@@ -240,7 +238,7 @@ export default function Dashboard() {
       )}
 
       {loading ? (
-        <PageLoading />
+        <SkeletonRows />
       ) : visibleInvoices.length === 0 ? (
         <div className="card empty-state">Nothing here yet.</div>
       ) : (
