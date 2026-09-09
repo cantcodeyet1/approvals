@@ -2,12 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, downloadUrl, downloadHref } from '../lib/api';
 import StatusPill from '../components/StatusPill.jsx';
-import { DownloadIcon, TrashIcon } from '../components/icons.jsx';
+import { DownloadIcon, TrashIcon, FileIcon } from '../components/icons.jsx';
 import { PageLoading } from '../components/Spinner.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import SendEmailDialog from '../components/SendEmailDialog.jsx';
 import Select from '../components/Select.jsx';
-import { formatDateTime, greeting } from '../lib/format';
+import { formatDate, formatDateTime, greeting } from '../lib/format';
 
 const FILTERS = [
   { value: 'all', label: 'All' },
@@ -240,14 +240,23 @@ export default function Dashboard() {
             <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll} style={{ width: 'auto' }} />
             Select all
           </label>
-          <div className="invoice-list">
-            {visibleInvoices.map((inv) => (
-              <div
-                className="invoice-row"
-                key={inv.id}
-                onClick={() => navigate(inv.status === 'pending' ? `/sign?ids=${inv.id}` : `/invoice/${inv.id}`)}
-              >
-                <div className="invoice-row-main">
+          <div className="doc-table">
+            <div className="doc-table-head">
+              <div></div>
+              <div>Document</div>
+              <div>Project</div>
+              <div>Date</div>
+              <div style={{ textAlign: 'right' }}>Status</div>
+            </div>
+            {visibleInvoices.map((inv) => {
+              const pending = inv.status === 'pending';
+              const title = (inv.original_filename || 'Untitled document').replace(/\.pdf$/i, '');
+              return (
+                <div
+                  className="doc-row"
+                  key={inv.id}
+                  onClick={() => navigate(pending ? `/sign?ids=${inv.id}` : `/invoice/${inv.id}`)}
+                >
                   <input
                     type="checkbox"
                     checked={selected.has(inv.id)}
@@ -255,35 +264,31 @@ export default function Dashboard() {
                     onClick={(e) => e.stopPropagation()}
                     style={{ width: 'auto', flexShrink: 0 }}
                   />
-                  {inv.status === 'pending' ? (
-                    <div className="invoice-row-text">
-                      <div className="invoice-row-title">{(inv.original_filename || 'Untitled document').replace(/\.pdf$/i, '')}</div>
-                      <div className="invoice-row-meta">Loaded {formatDateTime(inv.created_at)}</div>
+                  <div className="doc-cell-main">
+                    <div className="doc-icon">
+                      <FileIcon size={15} />
                     </div>
-                  ) : (
-                    <div className="invoice-row-text">
-                      <div className="invoice-row-title">{(inv.original_filename || 'Untitled document').replace(/\.pdf$/i, '')}</div>
-                      <div className="invoice-row-meta">
-                        {inv.project}
-                        {inv.item_description ? ` · ${inv.item_description}` : ''}
-                        {inv.signed_at ? ` · Signed ${formatDateTime(inv.signed_at)}` : ''}
-                      </div>
+                    <div className="doc-text">
+                      <div className="doc-title">{title}</div>
+                      <div className="doc-sub">{pending ? `Loaded ${formatDateTime(inv.created_at)}` : `Signed ${formatDateTime(inv.signed_at)}`}</div>
+                      {!pending && (
+                        <div className="doc-meta-mobile">
+                          {inv.project}
+                          {inv.item_description ? ` · ${inv.item_description}` : ''}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-                <div className="invoice-row-actions">
-                  {inv.status === 'pending' ? (
-                    <>
-                      <button className="btn-icon danger" onClick={(e) => requestDiscard(e, inv)} title="Discard" aria-label="Discard">
-                        <TrashIcon />
-                      </button>
-                      <StatusPill status="pending" />
-                    </>
-                  ) : (
-                    <>
-                      <button className="btn-icon danger" onClick={(e) => requestDiscard(e, inv)} title="Discard" aria-label="Discard">
-                        <TrashIcon />
-                      </button>
+                  </div>
+                  <div className="doc-col-project">
+                    {pending ? '—' : inv.project}
+                    {!pending && inv.item_description ? ` · ${inv.item_description}` : ''}
+                  </div>
+                  <div className="doc-col-date">{formatDate(pending ? inv.created_at : inv.signed_at)}</div>
+                  <div className="doc-col-status">
+                    <button className="btn-icon danger" onClick={(e) => requestDiscard(e, inv)} title="Discard" aria-label="Discard">
+                      <TrashIcon />
+                    </button>
+                    {!pending && (
                       <a
                         className="btn-icon"
                         href={downloadUrl(inv.id, 'stamped')}
@@ -293,12 +298,12 @@ export default function Dashboard() {
                       >
                         <DownloadIcon />
                       </a>
-                      <StatusPill status="approved" />
-                    </>
-                  )}
+                    )}
+                    <StatusPill status={pending ? 'pending' : 'approved'} />
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </>
       )}

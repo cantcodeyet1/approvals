@@ -123,10 +123,10 @@ export default function Settings() {
             No projects yet.
           </p>
         ) : (
-          <div className="invoice-list" style={{ marginTop: 18 }}>
+          <div className="simple-list" style={{ marginTop: 18 }}>
             {projects.map((p) => (
-              <div className="invoice-row" key={p.id}>
-                <span className="invoice-row-title">{p.name}</span>
+              <div className="simple-row" key={p.id}>
+                <span className="simple-row-title">{p.name}</span>
                 <button className="btn btn-ghost" onClick={() => handleDeleteProject(p.id)}>
                   Remove
                 </button>
