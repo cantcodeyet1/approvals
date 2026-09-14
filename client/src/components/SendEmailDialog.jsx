@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api, downloadHref } from '../lib/api';
 import Spinner from './Spinner.jsx';
 
@@ -6,8 +6,9 @@ const stripExt = (name) => (name || 'Untitled document').replace(/\.pdf$/i, '');
 
 // Browsers can't attach a file to a mailto: draft — no browser or OS mail
 // client exposes that to a webpage. This is the honest fallback used when
-// SendGrid isn't configured yet: download the file(s), then open the
-// default mail app with the same subject/body already filled in.
+// neither the Outlook agent nor SendGrid is available: download the
+// file(s), then open the default mail app with the same subject/body
+// already filled in.
 function openMailtoFallback({ to, cc, subject, body }) {
   const params = new URLSearchParams();
   if (cc) params.set('cc', cc);
@@ -17,8 +18,14 @@ function openMailtoFallback({ to, cc, subject, body }) {
   window.location.href = `mailto:${encodeURIComponent(to || '')}${query ? `?${query}` : ''}`;
 }
 
+const MODE_INFO = {
+  outlook: { pill: 'pill-success', label: 'Sends from your computer, attached' },
+  sendgrid: { pill: 'pill-success', label: 'Sends automatically, attached' },
+  demo: { pill: 'pill-warning', label: 'Demo mode — attach manually' },
+};
+
 export default function SendEmailDialog({ open, invoiceIds, invoices, onClose }) {
-  const [available, setAvailable] = useState(null); // null = checking, true/false once known
+  const [mode, setMode] = useState(null); // null = checking, then 'outlook' | 'sendgrid' | 'demo'
   const [to, setTo] = useState('');
   const [cc, setCc] = useState('');
   const [subject, setSubject] = useState('');
@@ -26,6 +33,7 @@ export default function SendEmailDialog({ open, invoiceIds, invoices, onClose })
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
   const [sent, setSent] = useState(false);
+  const pollRef = useRef(null);
 
   useEffect(() => {
     if (!open) return;
@@ -39,15 +47,39 @@ export default function SendEmailDialog({ open, invoiceIds, invoices, onClose })
     setBody(`Please find the following approved invoice${plural ? 's' : ''} attached:\n\n${names.map((n) => `- ${n}`).join('\n')}`);
     setError(null);
     setSent(false);
-    setAvailable(null);
+    setMode(null);
 
     api
       .getEmailStatus()
-      .then((res) => setAvailable(res.available))
-      .catch(() => setAvailable(false));
+      .then((res) => setMode(res.mode))
+      .catch(() => setMode('demo'));
+
+    return () => clearInterval(pollRef.current);
   }, [open, invoiceIds, invoices]);
 
   if (!open) return null;
+
+  function pollJob(jobId) {
+    pollRef.current = setInterval(async () => {
+      try {
+        const res = await api.getEmailJobStatus(jobId);
+        if (res.status === 'sent') {
+          clearInterval(pollRef.current);
+          setSending(false);
+          setSent(true);
+        } else if (res.status === 'failed') {
+          clearInterval(pollRef.current);
+          setSending(false);
+          setError(res.error || 'Your computer reported the send failed.');
+        }
+        // 'pending' / 'claimed' — keep polling
+      } catch (err) {
+        clearInterval(pollRef.current);
+        setSending(false);
+        setError(err.message);
+      }
+    }, 2000);
+  }
 
   async function handleSend() {
     setError(null);
@@ -56,7 +88,7 @@ export default function SendEmailDialog({ open, invoiceIds, invoices, onClose })
       return;
     }
 
-    if (available) {
+    if (mode === 'sendgrid') {
       setSending(true);
       try {
         await api.sendInvoiceEmail({ ids: invoiceIds, to, cc, subject, body });
@@ -64,6 +96,18 @@ export default function SendEmailDialog({ open, invoiceIds, invoices, onClose })
       } catch (err) {
         setError(err.message);
       } finally {
+        setSending(false);
+      }
+      return;
+    }
+
+    if (mode === 'outlook') {
+      setSending(true);
+      try {
+        const { jobId } = await api.queueInvoiceEmail({ ids: invoiceIds, to, cc, subject, body });
+        pollJob(jobId);
+      } catch (err) {
+        setError(err.message);
         setSending(false);
       }
       return;
@@ -84,34 +128,40 @@ export default function SendEmailDialog({ open, invoiceIds, invoices, onClose })
     setSent(true);
   }
 
+  const info = mode ? MODE_INFO[mode] : null;
+
   return (
     <div className="confirm-overlay" onClick={onClose}>
       <div className="confirm-dialog email-dialog" onClick={(e) => e.stopPropagation()}>
         <h3>Send via email</h3>
 
-        {available === null && (
+        {mode === null && (
           <p className="helper-text" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Spinner size={14} /> Checking email setup…
           </p>
         )}
-        {available === true && (
-          <span className="pill pill-success" style={{ marginBottom: 16 }}>
+        {info && (
+          <span
+            className={`pill ${info.pill}`}
+            style={{ marginBottom: 16 }}
+            title={
+              mode === 'outlook'
+                ? 'Queued for the Outlook agent running on your PC to send'
+                : mode === 'sendgrid'
+                  ? 'Sent immediately via SendGrid'
+                  : 'Neither the Outlook agent nor SendGrid is available right now — this downloads the file(s) and opens your mail app instead'
+            }
+          >
             <span className="pill-dot" />
-            Sends automatically, attached
-          </span>
-        )}
-        {available === false && (
-          <span className="pill pill-warning" style={{ marginBottom: 16 }} title="SendGrid isn't configured yet — this downloads the file(s) and opens your mail app instead">
-            <span className="pill-dot" />
-            Demo mode — attach manually
+            {info.label}
           </span>
         )}
 
         {sent ? (
           <p style={{ margin: '12px 0 20px' }}>
-            {available
-              ? 'Email sent.'
-              : "Downloading the file(s) and opening your mail app — attach the downloaded file(s) before sending."}
+            {mode === 'demo'
+              ? "Downloading the file(s) and opening your mail app — attach the downloaded file(s) before sending."
+              : 'Email sent.'}
           </p>
         ) : (
           <>
@@ -145,8 +195,8 @@ export default function SendEmailDialog({ open, invoiceIds, invoices, onClose })
             {sent ? 'Close' : 'Cancel'}
           </button>
           {!sent && (
-            <button className="btn btn-primary" onClick={handleSend} disabled={sending || available === null}>
-              {sending ? 'Sending…' : available ? 'Send' : 'Continue'}
+            <button className="btn btn-primary" onClick={handleSend} disabled={sending || mode === null}>
+              {sending ? (mode === 'outlook' ? 'Sending from your computer…' : 'Sending…') : mode === 'demo' ? 'Continue' : 'Send'}
             </button>
           )}
         </div>

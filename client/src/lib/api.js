@@ -170,4 +170,12 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ids, to, cc, subject, body }),
     }),
+  // Outlook-relay path: queues the send for the Windows agent to pick up.
+  queueInvoiceEmail: ({ ids, to, cc, subject, body }) =>
+    request('/api/email/queue', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids, to, cc, subject, body }),
+    }),
+  getEmailJobStatus: (jobId) => request(`/api/email/jobs/${jobId}`),
 };
