@@ -43,6 +43,23 @@ function requireAgentSecret(req, res, next) {
   next();
 }
 
+// A saved default subject/body that pre-fills the compose dialog — still
+// fully editable per send, just saves retyping the same boilerplate.
+router.get('/template', async (req, res) => {
+  const { data, error } = await supabase.from('email_settings').select('*').eq('id', 'default').maybeSingle();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ subject: data?.default_subject || '', body: data?.default_body || '' });
+});
+
+router.put('/template', async (req, res) => {
+  const { subject, body } = req.body;
+  const { error } = await supabase
+    .from('email_settings')
+    .upsert({ id: 'default', default_subject: subject || null, default_body: body || null, updated_at: new Date().toISOString() });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
 // The client checks this before deciding how to send: a real, immediate
 // send via SendGrid; a queued send via the Outlook agent (if it's currently
 // polling); or the download + mailto: fallback if neither is configured.

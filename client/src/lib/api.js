@@ -178,4 +178,19 @@ export const api = {
       body: JSON.stringify({ ids, to, cc, subject, body }),
     }),
   getEmailJobStatus: (jobId) => request(`/api/email/jobs/${jobId}`),
+  getEmailTemplate: () => request('/api/email/template'),
+  saveEmailTemplate: (subject, body) =>
+    request('/api/email/template', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subject, body }),
+    }),
+  listContacts: () => request('/api/contacts'),
+  addContact: (name, email) =>
+    request('/api/contacts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email }),
+    }),
+  deleteContact: (id) => request(`/api/contacts/${id}`, { method: 'DELETE' }),
 };

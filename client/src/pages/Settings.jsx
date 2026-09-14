@@ -16,6 +16,16 @@ export default function Settings() {
   const [newProject, setNewProject] = useState('');
   const [projectError, setProjectError] = useState(null);
 
+  const [contacts, setContacts] = useState([]);
+  const [newContactName, setNewContactName] = useState('');
+  const [newContactEmail, setNewContactEmail] = useState('');
+  const [contactError, setContactError] = useState(null);
+
+  const [templateSubject, setTemplateSubject] = useState('');
+  const [templateBody, setTemplateBody] = useState('');
+  const [templateSaved, setTemplateSaved] = useState(false);
+  const [savingTemplate, setSavingTemplate] = useState(false);
+
   useEffect(() => {
     Promise.all([api.listSigners(), api.listProjects()])
       .then(([signerList, projectList]) => {
@@ -24,6 +34,22 @@ export default function Settings() {
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
+
+    // Kept separate from the fetch above: these two depend on tables added
+    // in a later migration, so a fresh setup that hasn't run it yet still
+    // gets a fully working Signers/Projects page instead of one error
+    // banner blanking out everything.
+    api
+      .listContacts()
+      .then(setContacts)
+      .catch(() => setContacts([]));
+    api
+      .getEmailTemplate()
+      .then((template) => {
+        setTemplateSubject(template.subject || '');
+        setTemplateBody(template.body || '');
+      })
+      .catch(() => {});
   }, []);
 
   // The page shows only a loading spinner until data arrives, so the
@@ -67,6 +93,43 @@ export default function Settings() {
       await api.deleteProject(id);
     } catch (err) {
       setProjectError(err.message);
+    }
+  }
+
+  async function handleAddContact(e) {
+    e.preventDefault();
+    setContactError(null);
+    if (!newContactName.trim() || !newContactEmail.trim()) return;
+    try {
+      const created = await api.addContact(newContactName.trim(), newContactEmail.trim());
+      setContacts((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
+      setNewContactName('');
+      setNewContactEmail('');
+    } catch (err) {
+      setContactError(err.message);
+    }
+  }
+
+  async function handleDeleteContact(id) {
+    setContacts((prev) => prev.filter((c) => c.id !== id));
+    try {
+      await api.deleteContact(id);
+    } catch (err) {
+      setContactError(err.message);
+    }
+  }
+
+  async function handleSaveTemplate() {
+    setSavingTemplate(true);
+    setTemplateSaved(false);
+    try {
+      await api.saveEmailTemplate(templateSubject, templateBody);
+      setTemplateSaved(true);
+      setTimeout(() => setTemplateSaved(false), 2000);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSavingTemplate(false);
     }
   }
 
@@ -144,6 +207,75 @@ export default function Settings() {
             ))}
           </div>
         )}
+      </div>
+
+      <h3 id="recipients" className="settings-section-title" style={{ marginTop: 40 }}>
+        Recipients
+      </h3>
+      <p className="helper-text" style={{ marginTop: -6 }}>
+        Saved so they autocomplete in the "Send via email" To/CC fields.
+      </p>
+
+      <div className="card">
+        {contactError && <div className="error-banner">{contactError}</div>}
+
+        <form onSubmit={handleAddContact} style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <div className="field" style={{ marginBottom: 0, flex: '0 1 220px' }}>
+            <label>Name</label>
+            <input type="text" value={newContactName} onChange={(e) => setNewContactName(e.target.value)} placeholder="e.g. Gerhard Greyling" />
+          </div>
+          <div className="field" style={{ marginBottom: 0, flex: '0 1 260px' }}>
+            <label>Email</label>
+            <input type="email" value={newContactEmail} onChange={(e) => setNewContactEmail(e.target.value)} placeholder="gerhard@example.com" />
+          </div>
+          <button className="btn btn-secondary" type="submit">
+            Add
+          </button>
+        </form>
+
+        {contacts.length === 0 ? (
+          <p className="helper-text" style={{ marginTop: 18 }}>
+            No saved recipients yet.
+          </p>
+        ) : (
+          <div className="simple-list" style={{ marginTop: 18 }}>
+            {contacts.map((c) => (
+              <div className="simple-row" key={c.id}>
+                <span className="simple-row-title">
+                  {c.name} <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>· {c.email}</span>
+                </span>
+                <button className="btn btn-ghost" onClick={() => handleDeleteContact(c.id)}>
+                  Remove
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <h3 className="settings-section-title" style={{ marginTop: 40 }}>
+        Default email
+      </h3>
+      <p className="helper-text" style={{ marginTop: -6 }}>
+        Pre-fills the subject and message in "Send via email" — still editable for each send. Leave blank to keep the
+        automatic "Please find attached…" default.
+      </p>
+
+      <div className="card">
+        <div className="field">
+          <label>Subject</label>
+          <input type="text" value={templateSubject} onChange={(e) => setTemplateSubject(e.target.value)} placeholder="e.g. Approved invoice" />
+        </div>
+        <div className="field">
+          <label>Message</label>
+          <textarea rows={5} value={templateBody} onChange={(e) => setTemplateBody(e.target.value)} style={{ fontFamily: 'Tahoma, Verdana, sans-serif' }} />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button className="btn btn-primary" onClick={handleSaveTemplate} disabled={savingTemplate}>
+            {savingTemplate ? 'Saving…' : 'Save changes'}
+          </button>
+          {templateSaved && <span className="save-confirmation">Saved</span>}
+        </div>
       </div>
     </div>
   );

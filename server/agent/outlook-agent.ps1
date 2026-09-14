@@ -55,7 +55,13 @@ function Send-ApprovalsJob {
   $mail.To = $Job.to
   if ($Job.cc) { $mail.CC = $Job.cc }
   $mail.Subject = $Job.subject
-  $mail.Body = $Job.body
+
+  # Plain-text .Body carries no font at all — the recipient's client just
+  # uses its own default. Set .HTMLBody instead, wrapped in the same Tahoma
+  # styling the SendGrid path already uses, so both sending paths look the
+  # same to the recipient regardless of which one handled a given send.
+  $escapedBody = [System.Net.WebUtility]::HtmlEncode($Job.body) -replace "`r?`n", "<br>"
+  $mail.HTMLBody = "<div style=`"font-family:Tahoma,Verdana,sans-serif;font-size:14px;color:#1a1a1a;`">$escapedBody</div>"
 
   $tempFiles = @()
   try {

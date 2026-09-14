@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { api, downloadHref } from '../lib/api';
 import Spinner from './Spinner.jsx';
+import RecipientInput from './RecipientInput.jsx';
 
 const stripExt = (name) => (name || 'Untitled document').replace(/\.pdf$/i, '');
 
@@ -33,6 +34,7 @@ export default function SendEmailDialog({ open, invoiceIds, invoices, onClose })
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
   const [sent, setSent] = useState(false);
+  const [contacts, setContacts] = useState([]);
   const pollRef = useRef(null);
 
   useEffect(() => {
@@ -40,11 +42,13 @@ export default function SendEmailDialog({ open, invoiceIds, invoices, onClose })
     const selected = invoiceIds.map((id) => invoices.find((inv) => inv.id === id)).filter(Boolean);
     const names = selected.map((inv) => stripExt(inv.original_filename));
     const plural = names.length > 1;
+    const defaultSubject = plural ? `${names.length} approved invoices` : `Approved invoice: ${names[0] || ''}`;
+    const defaultBody = `Please find the following approved invoice${plural ? 's' : ''} attached:\n\n${names.map((n) => `- ${n}`).join('\n')}`;
 
     setTo('');
     setCc('');
-    setSubject(plural ? `${names.length} approved invoices` : `Approved invoice: ${names[0] || ''}`);
-    setBody(`Please find the following approved invoice${plural ? 's' : ''} attached:\n\n${names.map((n) => `- ${n}`).join('\n')}`);
+    setSubject(defaultSubject);
+    setBody(defaultBody);
     setError(null);
     setSent(false);
     setMode(null);
@@ -53,6 +57,18 @@ export default function SendEmailDialog({ open, invoiceIds, invoices, onClose })
       .getEmailStatus()
       .then((res) => setMode(res.mode))
       .catch(() => setMode('demo'));
+
+    api.listContacts().then(setContacts).catch(() => setContacts([]));
+
+    // A saved default template (Settings) fully replaces the auto-generated
+    // subject/body when set — still editable from here either way.
+    api
+      .getEmailTemplate()
+      .then((tpl) => {
+        if (tpl.subject) setSubject(tpl.subject);
+        if (tpl.body) setBody(tpl.body);
+      })
+      .catch(() => {});
 
     return () => clearInterval(pollRef.current);
   }, [open, invoiceIds, invoices]);
@@ -168,11 +184,11 @@ export default function SendEmailDialog({ open, invoiceIds, invoices, onClose })
             {error && <div className="error-banner">{error}</div>}
             <div className="field">
               <label>To</label>
-              <input type="text" value={to} onChange={(e) => setTo(e.target.value)} placeholder="name@example.com, name2@example.com" />
+              <RecipientInput value={to} onChange={setTo} contacts={contacts} placeholder="name@example.com, name2@example.com" />
             </div>
             <div className="field">
               <label>CC (optional)</label>
-              <input type="text" value={cc} onChange={(e) => setCc(e.target.value)} placeholder="cc@example.com" />
+              <RecipientInput value={cc} onChange={setCc} contacts={contacts} placeholder="cc@example.com" />
             </div>
             <div className="field">
               <label>Subject</label>
