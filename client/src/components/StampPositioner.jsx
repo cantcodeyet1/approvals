@@ -142,11 +142,9 @@ export default function StampPositioner({
     };
   }, [file, pageIndex]);
 
-  // Measure text + signature to size the stamp box, then place it in the emptiest corner
-  const computeBestSpot = useCallback(async () => {
-    if (!pageInfo) return;
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
+  const measureBox = useCallback(async () => {
+    if (!pageInfo) return null;
+    const ctx = canvasRef.current.getContext('2d');
 
     const pxFontSize = FONT_SIZE_PT * pageInfo.scale;
     ctx.font = `${pxFontSize}px Helvetica, Arial, sans-serif`;
@@ -162,9 +160,35 @@ export default function StampPositioner({
       }
     }
 
-    const widthPt = Math.max(textWidthPt, sigWidthPt);
-    const heightPt = (lines.length > 0 ? LINE_HEIGHT_PT * 3 : 0) + sigHeightPt + 6;
-    setBoxSizePt({ width: widthPt, height: heightPt });
+    return {
+      width: Math.max(textWidthPt, sigWidthPt),
+      height: (lines.length > 0 ? LINE_HEIGHT_PT * 3 : 0) + sigHeightPt + 6,
+    };
+  }, [pageInfo, signatureUrl, sigWidthPt, approvedBy, date, project, includeText]);
+
+  // Keep the box size in step with the signature size / text toggle. It used
+  // to be measured only on first placement, so shrinking the signature or
+  // turning the text off left a stale, oversized box whose bounds stopped the
+  // stamp from reaching the page edge.
+  useEffect(() => {
+    let cancelled = false;
+    measureBox().then((size) => {
+      if (size && !cancelled) setBoxSizePt(size);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [measureBox]);
+
+  // Size the stamp box, then place it in the emptiest spot
+  const computeBestSpot = useCallback(async () => {
+    if (!pageInfo) return;
+    const ctx = canvasRef.current.getContext('2d');
+
+    const size = await measureBox();
+    const widthPt = size.width;
+    const heightPt = size.height;
+    setBoxSizePt(size);
 
     const boxWpx = widthPt * pageInfo.scale;
     const boxHpx = heightPt * pageInfo.scale;
@@ -198,7 +222,7 @@ export default function StampPositioner({
     const best = emptiest.sort((a, b) => b.py + b.px - (a.py + a.px))[0];
 
     applyPixelPosition(best.px, best.py, pageInfo);
-  }, [pageInfo, signatureUrl, sigWidthPt, approvedBy, date, project, includeText]);
+  }, [pageInfo, measureBox]);
 
   useEffect(() => {
     if (pageInfo && (!value || value.page !== pageIndex)) {
